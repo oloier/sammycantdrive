@@ -41,48 +41,17 @@
     const audio = document.getElementById('audio');
     const img = document.getElementById('img');
     let glitching = false;
-    let audioCtx, sourceNode, distortion, filter;
-
-    function makeDistortionCurve(amount) {
-      const n = 256, curve = new Float32Array(n);
-      for (let i = 0; i < n; i++) {
-        const x = (i * 2) / n - 1;
-        curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
-      }
-      return curve;
-    }
-
-    function setupAudio() {
-      if (audioCtx) return;
-      audioCtx = new AudioContext();
-      sourceNode = audioCtx.createMediaElementSource(audio);
-      distortion = audioCtx.createWaveShaper();
-      filter = audioCtx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 350;
-      sourceNode.connect(distortion);
-      distortion.connect(filter);
-      filter.connect(audioCtx.destination);
-    }
 
     img.addEventListener('click', () => {
       if (glitching) return;
       glitching = true;
-      setupAudio();
 
-      audioCtx.resume().then(() => {
-        audio.currentTime = 0;
-        audio.play();
-      });
+      audio.currentTime = 0;
+      audio.play();
 
-      // audio chaos: set distortion once (swapping curve mid-playback clicks),
-      // then sweep filter + pitch continuously
-      distortion.curve = makeDistortionCurve(500);
       const audioInterval = setInterval(() => {
-        audio.playbackRate = 0.5 + Math.random() * 2.2;
-        filter.frequency.setTargetAtTime(100 + Math.random() * 6000, audioCtx.currentTime, 0.05);
-        filter.Q.setTargetAtTime(0.5 + Math.random() * 20, audioCtx.currentTime, 0.05);
-      }, 110);
+        audio.playbackRate = 0.3 + Math.random() * 3;
+      }, 100);
 
       // canvas chaos
       const canvas = document.createElement('canvas');
@@ -135,8 +104,6 @@
         clearInterval(audioInterval);
         canvas.remove();
         audio.playbackRate = 1;
-        distortion.curve = null;
-        filter.frequency.value = 350;
         glitching = false;
       }
 
