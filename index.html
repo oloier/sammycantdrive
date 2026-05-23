@@ -5,6 +5,9 @@
   <title>sammy can't drive...</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <style>
     body {
       margin: 0;
@@ -15,8 +18,12 @@
       background: #fff;
     }
     img {
-      max-width: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
       cursor: pointer;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #000; }
     }
   </style>
 </head>
