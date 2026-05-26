@@ -5,6 +5,17 @@
   <title>sammy can't drive...</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="sammy can't drive...">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="sammy can't drive...">
+  <meta property="og:description" content="sammy can't drive...">
+  <meta property="og:url" content="https://sammycantdrive.com/">
+  <meta property="og:image" content="https://sammycantdrive.com/scd55.jpg">
+  <meta property="og:image:alt" content="Sammy can't drive">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="sammy can't drive...">
+  <meta name="twitter:description" content="sammy can't drive...">
+  <meta name="twitter:image" content="https://sammycantdrive.com/scd55.jpg">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -44,9 +55,6 @@
     const img = document.getElementById('img');
     let state = 'idle'; // idle | playing | celebrating
     let celebCanvas, spawnTimer, endTimer, audioCopies = [];
-    let viewport = { width: 0, height: 0 };
-    let stampedTiles = [];
-    let resizeCelebrationCanvas = null;
 
     img.addEventListener('click', () => {
       if (state === 'celebrating') { stopCelebration(); return; }
@@ -61,59 +69,22 @@
       state = 'celebrating';
 
       celebCanvas = document.createElement('canvas');
-      celebCanvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:999';
+      celebCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
+      celebCanvas.width = window.innerWidth;
+      celebCanvas.height = window.innerHeight;
       document.body.appendChild(celebCanvas);
       const ctx = celebCanvas.getContext('2d');
+ 
+      const W = celebCanvas.width, H = celebCanvas.height;
       let spawnCount = 0;
 
-      function syncCanvasSize() {
-        viewport.width = window.innerWidth;
-        viewport.height = window.innerHeight;
-        celebCanvas.width = viewport.width;
-        celebCanvas.height = viewport.height;
-        celebCanvas.style.width = `${viewport.width}px`;
-        celebCanvas.style.height = `${viewport.height}px`;
-      }
-
-      function redrawTiles() {
-        ctx.clearRect(0, 0, celebCanvas.width, celebCanvas.height);
-        stampedTiles.forEach(tile => {
-          const tileW = viewport.width * tile.widthRatio;
-          const tileH = tileW * tile.aspectRatio;
-          const x = viewport.width * tile.xRatio;
-          const y = viewport.height * tile.yRatio;
-          ctx.save();
-          ctx.globalAlpha = tile.alpha;
-          ctx.translate(x + tileW / 2, y + tileH / 2);
-          ctx.drawImage(img, -tileW / 2, -tileH / 2, tileW, tileH);
-          ctx.restore();
-        });
-      }
-
-      resizeCelebrationCanvas = () => {
-        syncCanvasSize();
-        redrawTiles();
-      };
-      window.addEventListener('resize', resizeCelebrationCanvas);
-      resizeCelebrationCanvas();
-
       function spawnTile() {
-        const widthRatio = 0.1 + Math.random() * 0.5;
-        const aspectRatio = img.naturalHeight / img.naturalWidth;
-        const tileW = viewport.width * widthRatio;
-        const tileH = tileW * aspectRatio;
-        const x = Math.random() * (viewport.width + tileW * 0.4) - tileW * 0.2;
-        const y = Math.random() * (viewport.height + tileH * 0.4) - tileH * 0.2;
-        const alpha = 0.75 + Math.random() * 0.25;
-        stampedTiles.push({
-          alpha,
-          aspectRatio,
-          widthRatio,
-          xRatio: x / viewport.width,
-          yRatio: y / viewport.height
-        });
+        const tileW = W * (0.1 + Math.random() * 0.5);
+        const tileH = tileW * (img.naturalHeight / img.naturalWidth);
+        const x = Math.random() * (W + tileW * 0.4) - tileW * 0.2;
+        const y = Math.random() * (H + tileH * 0.4) - tileH * 0.2;
         ctx.save();
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = 0.75 + Math.random() * 0.25;
         ctx.translate(x + tileW / 2, y + tileH / 2);
         ctx.drawImage(img, -tileW / 2, -tileH / 2, tileW, tileH);
         ctx.restore();
@@ -147,9 +118,6 @@
     function softStop() {
       clearTimeout(spawnTimer);
       clearTimeout(endTimer);
-      window.removeEventListener('resize', resizeCelebrationCanvas);
-      resizeCelebrationCanvas = null;
-      stampedTiles = [];
       // let playing blips finish naturally, then clean up
       const drain = () => {
         if (audioCopies.length === 0) { celebCanvas?.remove(); state = 'idle'; return; }
@@ -161,12 +129,9 @@
     function stopCelebration() {
       clearTimeout(spawnTimer);
       clearTimeout(endTimer);
-      window.removeEventListener('resize', resizeCelebrationCanvas);
-      resizeCelebrationCanvas = null;
       celebCanvas?.remove();
       audioCopies.forEach(a => a.pause());
       audioCopies = [];
-      stampedTiles = [];
       state = 'idle';
     }
   </script>
