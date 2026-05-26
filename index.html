@@ -18,6 +18,8 @@
       background: #fff;
     }
     img {
+      position: relative;
+      z-index: 1000;
       max-width: 90vw;
       max-height: 90vh;
       cursor: pointer;
@@ -40,76 +42,89 @@
   <script>
     const audio = document.getElementById('audio');
     const img = document.getElementById('img');
-    let glitching = false;
+    let state = 'idle'; // idle | playing | celebrating
+    let celebCanvas, spawnTimer, endTimer, audioCopies = [];
 
     img.addEventListener('click', () => {
-      if (glitching) return;
-      glitching = true;
-
+      if (state === 'celebrating') { stopCelebration(); return; }
+      if (state === 'playing') return;
+      state = 'playing';
       audio.currentTime = 0;
       audio.play();
-
-      const audioInterval = setInterval(() => {
-        audio.playbackRate = 0.3 + Math.random() * 3;
-      }, 100);
-
-      // canvas chaos
-      const canvas = document.createElement('canvas');
-      canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      document.body.appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-      let animFrame;
-
-      function glitchFrame() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const copies = 3 + Math.floor(Math.random() * 7);
-        for (let c = 0; c < copies; c++) {
-          const scale = 0.15 + Math.random() * 2.2;
-          const w = img.width * scale;
-          const h = img.height * scale;
-          const x = Math.random() * canvas.width - w / 2;
-          const y = Math.random() * canvas.height - h / 2;
-
-          ctx.globalAlpha = 0.15 + Math.random() * 0.85;
-          ctx.filter = `hue-rotate(${Math.random() * 360}deg) saturate(${1 + Math.random() * 8}) brightness(${0.4 + Math.random() * 2})`;
-          ctx.drawImage(img, x, y, w, h);
-
-          // horizontal glitch strips
-          const strips = Math.floor(Math.random() * 12);
-          for (let s = 0; s < strips; s++) {
-            const sy = Math.floor(Math.random() * img.naturalHeight);
-            const sh = Math.floor(1 + Math.random() * 40);
-            const dx = (Math.random() - 0.5) * 140;
-            ctx.drawImage(img, 0, sy, img.naturalWidth, sh,
-              x + dx, y + (sy / img.naturalHeight) * h,
-              w, (sh / img.naturalHeight) * h);
-          }
-        }
-
-        ctx.globalAlpha = 1;
-        ctx.filter = 'none';
-        animFrame = requestAnimationFrame(glitchFrame);
-      }
-
-      glitchFrame();
-
-      let cleaned = false;
-      function cleanup() {
-        if (cleaned) return;
-        cleaned = true;
-        cancelAnimationFrame(animFrame);
-        clearInterval(audioInterval);
-        canvas.remove();
-        audio.playbackRate = 1;
-        glitching = false;
-      }
-
-      audio.addEventListener('ended', cleanup, { once: true });
-      setTimeout(cleanup, 10000); // safety net
+      audio.addEventListener('ended', startCelebration, { once: true });
     });
+
+    function startCelebration() {
+      state = 'celebrating';
+
+      celebCanvas = document.createElement('canvas');
+      celebCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
+      celebCanvas.width = window.innerWidth;
+      celebCanvas.height = window.innerHeight;
+      document.body.appendChild(celebCanvas);
+      const ctx = celebCanvas.getContext('2d');
+
+      const W = celebCanvas.width, H = celebCanvas.height;
+      let spawnCount = 0;
+
+      function spawnTile() {
+        const tileW = W * (0.1 + Math.random() * 0.5);
+        const tileH = tileW * (img.naturalHeight / img.naturalWidth);
+        const x = Math.random() * (W + tileW * 0.4) - tileW * 0.2;
+        const y = Math.random() * (H + tileH * 0.4) - tileH * 0.2;
+        const angle = (Math.random() - 0.5) * Math.PI * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.75 + Math.random() * 0.25;
+        ctx.translate(x + tileW / 2, y + tileH / 2);
+        // ctx.rotate(angle);
+        ctx.drawImage(img, -tileW / 2, -tileH / 2, tileW, tileH);
+        ctx.restore();
+
+        playBlip();
+
+        spawnCount++;
+        const delay = Math.max(60, 700 - spawnCount * 18);
+        spawnTimer = setTimeout(spawnTile, delay);
+      }
+
+      spawnTile();
+      endTimer = setTimeout(softStop, 20000);
+    }
+
+    function playBlip() {
+      const a = new Audio();
+      const s1 = document.createElement('source');
+      s1.src = 'scd55.webm'; s1.type = 'audio/webm';
+      const s2 = document.createElement('source');
+      s2.src = 'scd55.mp3'; s2.type = 'audio/mpeg';
+      a.appendChild(s1); a.appendChild(s2);
+      a.currentTime = Math.random() * 3;
+      a.volume = 0.35 + Math.random() * 0.65;
+      a.playbackRate = 0.7 + Math.random() * 1.6;
+      a.play().catch(() => {});
+      audioCopies.push(a);
+      a.addEventListener('ended', () => { audioCopies = audioCopies.filter(x => x !== a); });
+    }
+
+    function softStop() {
+      clearTimeout(spawnTimer);
+      clearTimeout(endTimer);
+      // let playing blips finish naturally, then clean up
+      const drain = () => {
+        if (audioCopies.length === 0) { celebCanvas?.remove(); state = 'idle'; return; }
+        setTimeout(drain, 300);
+      };
+      drain();
+    }
+
+    function stopCelebration() {
+      clearTimeout(spawnTimer);
+      clearTimeout(endTimer);
+      celebCanvas?.remove();
+      audioCopies.forEach(a => a.pause());
+      audioCopies = [];
+      state = 'idle';
+    }
   </script>
 </body>
 </html>
